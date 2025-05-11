@@ -48,3 +48,5 @@ struct LogsView: View {
         .background(Color.black.edgesIgnoringSafeArea(.all))
     }
 }
+
+

@@ -18,6 +18,10 @@ struct ContentView: View {
     @State private var selectedActionIndex = 0
     @State private var showDropdown = false
     
+    @State private var showConnectionModal = true
+    @State private var ipAddress = ""
+    @State private var port = ""
+    
     let actions = ["Set Low", "Set High"]
     
     var body: some View {
@@ -77,6 +81,19 @@ struct ContentView: View {
                         LogsView(showLogs: $showLogs)
                         //.presentationDetents([.fraction(0.75)]) // Appears from the bottom
                         //.background(Color.black.opacity(0.8))
+                    }
+                    
+                    Button(action: {
+                        showConnectionModal = true
+                    }) {
+                        Text("Connect")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.purple)
+                            .cornerRadius(8)
+                    }
+                    .sheet(isPresented: $showConnectionModal) {
+                        ConnectionView(isPresented: $showConnectionModal, ipAddress: $ipAddress, port: $port)
                     }
                 }
                 
@@ -164,6 +181,7 @@ struct ContentView: View {
     }
     
     
+
     
     struct GPIOPin: Hashable {
         let id = UUID()
