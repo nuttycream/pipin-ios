@@ -14,8 +14,15 @@ struct ContentView: View {
     
     @State private var showLogs = false
     
+    @State private var selectedActionIndex = 0
+    @State private var showDropdown = false
+
+    let actions = ["Set Low", "Set High"]
+    
     var body: some View {
+        
         VStack(alignment: .center, spacing: 20.0){
+            
             Text("pipin")
                 .font(.system(size: 32, weight: .bold, design: .monospaced))
             //.foregroundColor(.black)
@@ -31,6 +38,7 @@ struct ContentView: View {
                         .padding()
                         .background(Color.green)
                         .cornerRadius(8)
+    
                 }
                 
                 Button(action: {
@@ -66,7 +74,7 @@ struct ContentView: View {
                 .sheet(isPresented: $showLogs) {
                             LogsView(showLogs: $showLogs)
                                 .presentationDetents([.fraction(0.75)]) // Appears from the bottom
-                                .background(Color.black.opacity(0.8))
+                                //.background(Color.black.opacity(0.8))
                         }
             }
             
@@ -102,6 +110,7 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal, 16.0)
+            .frame(minHeight:300)
             
             
             //Queue
@@ -111,18 +120,18 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
             
             HStack {
-                Picker("Action", selection: $selectedAction) {
-                    Text("Set Low").tag("Set Low")
-                    Text("Set High").tag("Set High")
-                }
-                .pickerStyle(MenuPickerStyle())
-                .frame(width: 120)
+                DropDownMenu(
+                    options: actions,
+                    selectedOptionIndex: $selectedActionIndex,
+                    showDropdown: $showDropdown
+                )
 
                 TextField("GPIO Pin", text: $selectedPin)
                     .frame(width: 60)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
 
                 Button("Add") {
+                    let selectedAction = actions[selectedActionIndex]
                     queue.append((selectedAction, selectedPin))
                 }
                 .padding(8)
@@ -157,7 +166,7 @@ struct ContentView: View {
             }
 
 
-        }
+        }.buttonStyle(PlainButtonStyle())
     }
 
     
