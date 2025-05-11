@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var connectionManager: PipinManager
+    
     @State private var selectedAction = "Set Low"
     @State private var selectedPin = "0"
     @State private var queue: [(String, String)] = []
@@ -37,7 +39,6 @@ struct ContentView: View {
                 //row setup, resest, Terminate button
                 HStack {
                     Button(action: {
-                        pipin.setup()
                     }) {
                         Text("Setup")
                             .foregroundColor(.black)
@@ -48,7 +49,6 @@ struct ContentView: View {
                     }
                     
                     Button(action: {
-                        pipin.reset()
                     }) {
                         Text("Reset")
                             .foregroundColor(.black)
@@ -58,7 +58,6 @@ struct ContentView: View {
                     }
                     
                     Button(action: {
-                        pipin.terminate()
                     }) {
                         Text("Terminate")
                             .foregroundColor(.black)
@@ -179,9 +178,6 @@ struct ContentView: View {
             }.buttonStyle(PlainButtonStyle())
         }
     }
-    
-    
-
     
     struct GPIOPin: Hashable {
         let id = UUID()
