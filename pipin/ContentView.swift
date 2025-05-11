@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var queue: [(String, String)] = []
     @State private var loop = false
     
+    @State private var showLogs = false
+    
     var body: some View {
         VStack(alignment: .center, spacing: 20.0){
             Text("pipin")
@@ -50,7 +52,28 @@ struct ContentView: View {
                         .background(Color.green)
                         .cornerRadius(8)
                 }
+                
+
+                Button(action: {
+                   showLogs.toggle()
+                }) {
+                   Text("Logs")
+                       .foregroundColor(.white)
+                       .padding()
+                       .background(Color.blue)
+                       .cornerRadius(8)
+                }
+                .sheet(isPresented: $showLogs) {
+                            LogsView(showLogs: $showLogs)
+                                .presentationDetents([.fraction(0.75)]) // Appears from the bottom
+                                .background(Color.black.opacity(0.8))
+                        }
             }
+            
+           
+            
+             
+            
             
             //GPIO pins
             Text("GPIO Pins")
