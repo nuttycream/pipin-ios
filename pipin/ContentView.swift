@@ -7,6 +7,11 @@
 
 import SwiftUI
 struct ContentView: View {
+    @State private var selectedAction = "Set Low"
+    @State private var selectedPin = "0"
+    @State private var queue: [(String, String)] = []
+    @State private var loop = false
+    
     var body: some View {
         VStack(alignment: .center, spacing: 20.0){
             Text("pipin")
@@ -16,17 +21,44 @@ struct ContentView: View {
             
             //row setup, resest, Terminate button
             HStack {
-                Button(/*@START_MENU_TOKEN@*/"Button"/*@END_MENU_TOKEN@*/) {
-                    /*@START_MENU_TOKEN@*//*@PLACEHOLDER=Action@*/ /*@END_MENU_TOKEN@*/
+                Button(action: {
+                    pipin.setup()
+                }) {
+                    Text("Setup")
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(8)
                 }
-                Button(/*@START_MENU_TOKEN@*/"Button"/*@END_MENU_TOKEN@*/) {
-                    /*@START_MENU_TOKEN@*//*@PLACEHOLDER=Action@*/ /*@END_MENU_TOKEN@*/
+                
+                Button(action: {
+                    pipin.reset()
+                }) {
+                    Text("Reset")
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(8)
                 }
-                Button(/*@START_MENU_TOKEN@*/"Button"/*@END_MENU_TOKEN@*/) {
-                    /*@START_MENU_TOKEN@*//*@PLACEHOLDER=Action@*/ /*@END_MENU_TOKEN@*/
+                
+                Button(action: {
+                    pipin.terminate()
+                }) {
+                    Text("Terminate")
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(8)
                 }
             }
+            
+            //GPIO pins
+            Text("GPIO Pins")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+            //.foregroundColor(.black)
+                .frame(maxWidth: .infinity, alignment: .center)
             ScrollView{
+                
                 //grid of GPIO pins
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8)  {
                     ForEach(gpioPins, id: \.id) { pin in
@@ -37,7 +69,7 @@ struct ContentView: View {
                             Text(pin.label)
                                 .font(.system(size: 14, design: .monospaced))
                                 .foregroundColor(.white)
-                                .padding(8)
+                                .padding(16)
                                 .frame(maxWidth: .infinity)
                                 .background(pin.color)
                                 .cornerRadius(6)
@@ -46,8 +78,62 @@ struct ContentView: View {
                     
                 }
             }
-
+            .padding(.horizontal, 16.0)
             
+            
+            //Queue
+            Text("Queue")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+            //.foregroundColor(.black)
+                .frame(maxWidth: .infinity, alignment: .center)
+            
+            HStack {
+                Picker("Action", selection: $selectedAction) {
+                    Text("Set Low").tag("Set Low")
+                    Text("Set High").tag("Set High")
+                }
+                .pickerStyle(MenuPickerStyle())
+                .frame(width: 120)
+
+                TextField("GPIO Pin", text: $selectedPin)
+                    .frame(width: 60)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                Button("Add") {
+                    queue.append((selectedAction, selectedPin))
+                }
+                .padding(8)
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(6)
+            }
+
+            Toggle("Loop", isOn: $loop)
+                .foregroundColor(.white)
+            
+            Button("Stop") {
+                // TODO: Stop logic
+            }
+            .padding()
+            .background(Color.red)
+            .foregroundColor(.white)
+            .cornerRadius(6)
+            
+            ForEach(queue.indices, id: \.self) { index in
+                let item = queue[index]
+                HStack{
+                    Text("[Queue \(index)] \(item.0) GPIO \(item.1)")
+                        .font(.system(size: 14, design: .monospaced))
+                        .foregroundColor(.gray)
+                    
+                    Button("Delete") {
+                        //add pop here later
+                    }
+                }
+                
+            }
+
+
         }
     }
 
