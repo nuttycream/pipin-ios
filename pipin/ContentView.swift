@@ -16,201 +16,204 @@ struct ContentView: View {
     @State private var statusMessage: String? = nil
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .center, spacing: 20.0) {
-                HStack {
-                    Text("pipin")
-                        .font(.system(size: 32, weight: .bold, design: .monospaced))
-                    
-                    if connectionManager.isConnected {
-                        Text("CONNECTED")
-                            .foregroundColor(.green)
-                            .font(.caption)
-                    } else {
-                        Text("DISCONNECTED")
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                
-                // temp
-                // send this to LogView
-                if let message = statusMessage {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                        .padding()
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                statusMessage = nil
-                            }
-                        }
-                }
-                
-                if let message = connectionManager.lastError {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding()
-                }
-                
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
-                        // GPIO Control Buttons
-                        Button(action: {
-                            isLoading = true
-                            connectionManager.setupGpio { success in
-                                DispatchQueue.main.async {
-                                    isLoading = false
-                                    statusMessage = success ? "Setup successful" : "Setup failed"
-                                }
-                            }
-                        }) {
-                            VStack {
-                                Image(systemName: "gearshape.fill")
-                                    .font(.system(size: 24))
-                                Text("Initialize")
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.green.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        .disabled(isLoading || !connectionManager.isConnected)
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .center, spacing: 20.0) {
+                    HStack {
+                        Text("pipin")
+                            .font(.system(size: 32, weight: .bold, design: .monospaced))
                         
-                        Button(action: {
-                            isLoading = true
-                            connectionManager.resetGpio { success in
-                                DispatchQueue.main.async {
-                                    isLoading = false
-                                    statusMessage = success ? "Reset successful" : "Reset failed"
-                                }
-                            }
-                        }) {
-                            VStack {
-                                Image(systemName: "arrow.counterclockwise")
-                                    .font(.system(size: 24))
-                                Text("Reset")
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.blue.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        .disabled(isLoading || !connectionManager.isConnected)
-                        
-                        Button(action: {
-                            isLoading = true
-                            connectionManager.terminateGpio { success in
-                                DispatchQueue.main.async {
-                                    isLoading = false
-                                    statusMessage = success ? "Terminate successful" : "Terminate failed"
-                                }
-                            }
-                        }) {
-                            VStack {
-                                Image(systemName: "xmark.circle")
-                                    .font(.system(size: 24))
-                                Text("Terminate")
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.red.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        .disabled(isLoading || !connectionManager.isConnected)
-                    }
-                    
-                    HStack(spacing: 16) {
-                        // App Navigation Buttons
-                        NavigationLink(destination: QueueView()) {
-                            VStack {
-                                Image(systemName: "list.bullet.rectangle")
-                                    .font(.system(size: 24))
-                                Text("Queue")
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.purple.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        
-                        Button(action: {
-                            showLogs.toggle()
-                        }) {
-                            VStack {
-                                Image(systemName: "doc.text")
-                                    .font(.system(size: 24))
-                                Text("Logs")
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(Color.orange.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                        }
-                        
-                        Button(action: {
-                            showConnectionModal = true
-                        }) {
-                            VStack {
-                                Image(systemName: connectionManager.isConnected ? "wifi" : "wifi.slash")
-                                    .font(.system(size: 24))
-                                Text(connectionManager.isConnected ? "Disconnect" : "Connect")
-                            }
-                            .frame(width: 80, height: 80)
-                            .background(connectionManager.isConnected ? Color.red.opacity(0.8) : Color.green.opacity(0.8))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                        if connectionManager.isConnected {
+                            Text("CONNECTED")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                        } else {
+                            Text("DISCONNECTED")
+                                .foregroundColor(.red)
+                                .font(.caption)
                         }
                     }
-                }
-                .padding(.vertical)
-                
-                //GPIO pins
-                Text("GPIO Pins")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .frame(maxWidth: .infinity, alignment: .center)
-                
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                        ForEach(gpioPins, id: \.id) { pin in
+                    
+                    // temp
+                    // send this to LogView
+                    if let message = statusMessage {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding()
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                    statusMessage = nil
+                                }
+                            }
+                    }
+                    
+                    if let message = connectionManager.lastError {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding()
+                    }
+                    
+                    VStack(spacing: 16) {
+                        HStack(spacing: 16) {
+                            //GPIO controsl
                             Button(action: {
-                                if connectionManager.isConnected {
-                                    // extracting pin from label
-                                    // need better way to do this imo
-                                    // ideally the id
-                                    if let pinNumber = Int(pin.label.components(separatedBy: " ").last ?? "") {
-                                        connectionManager.togglePin(pinNumber) { success in
-                                            if !success {
-                                                DispatchQueue.main.async {
-                                                    statusMessage = "Failed to toggle pin"
+                                isLoading = true
+                                connectionManager.setupGpio { success in
+                                    DispatchQueue.main.async {
+                                        isLoading = false
+                                        statusMessage = success ? "Setup successful" : "Setup failed"
+                                    }
+                                }
+                            }) {
+                                VStack {
+                                    Image(systemName: "gearshape.fill")
+                                        .font(.system(size: 24))
+                                    Text("Initialize")
+                                }
+                                .frame(width: 80, height: 80)
+                                .background(Color.green.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            .disabled(isLoading || !connectionManager.isConnected)
+                            
+                            Button(action: {
+                                isLoading = true
+                                connectionManager.resetGpio { success in
+                                    DispatchQueue.main.async {
+                                        isLoading = false
+                                        statusMessage = success ? "Reset successful" : "Reset failed"
+                                    }
+                                }
+                            }) {
+                                VStack {
+                                    Image(systemName: "arrow.counterclockwise")
+                                        .font(.system(size: 24))
+                                    Text("Reset")
+                                }
+                                .frame(width: 80, height: 80)
+                                .background(Color.blue.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            .disabled(isLoading || !connectionManager.isConnected)
+                            
+                            Button(action: {
+                                isLoading = true
+                                connectionManager.terminateGpio { success in
+                                    DispatchQueue.main.async {
+                                        isLoading = false
+                                        statusMessage = success ? "Terminate successful" : "Terminate failed"
+                                    }
+                                }
+                            }) {
+                                VStack {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.system(size: 24))
+                                    Text("Terminate")
+                                }
+                                .frame(width: 80, height: 80)
+                                .background(Color.red.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            .disabled(isLoading || !connectionManager.isConnected)
+                        }
+                        
+                        // navigation
+                        HStack(spacing: 16) {
+                            NavigationLink(destination: QueueView()) {
+                                VStack {
+                                    Image(systemName: "list.bullet.rectangle")
+                                        .font(.system(size: 24))
+                                    Text("Queue")
+                                }
+                                .frame(width: 80, height: 80)
+                                .background(Color.purple.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            
+                            Button(action: {
+                                showLogs.toggle()
+                            }) {
+                                VStack {
+                                    Image(systemName: "doc.text")
+                                        .font(.system(size: 24))
+                                    Text("Logs")
+                                }
+                                .frame(width: 80, height: 80)
+                                .background(Color.orange.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            
+                            Button(action: {
+                                showConnectionModal = true
+                            }) {
+                                VStack {
+                                    Image(systemName: connectionManager.isConnected ? "wifi" : "wifi.slash")
+                                        .font(.system(size: 24))
+                                    Text(connectionManager.isConnected ? "Disconnect" : "Connect")
+                                }
+                                .frame(width: 80, height: 80)
+                                .background(connectionManager.isConnected ? Color.red.opacity(0.8) : Color.green.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                        }
+                    }
+                    .padding(.vertical)
+                    
+                    //GPIO pins
+                    Text("GPIO Pins")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                            ForEach(gpioPins, id: \.id) { pin in
+                                Button(action: {
+                                    if connectionManager.isConnected {
+                                        // extracting pin from label
+                                        // need better way to do this imo
+                                        // ideally the id
+                                        if let pinNumber = Int(pin.label.components(separatedBy: " ").last ?? "") {
+                                            connectionManager.togglePin(pinNumber) { success in
+                                                if !success {
+                                                    DispatchQueue.main.async {
+                                                        statusMessage = "Failed to toggle pin"
+                                                    }
                                                 }
                                             }
                                         }
+                                    } else {
+                                        statusMessage = "Not connected to server"
                                     }
-                                } else {
-                                    statusMessage = "Not connected to server"
+                                }) {
+                                    Text(pin.label)
+                                        .font(.system(size: 14, design: .monospaced))
+                                        .foregroundColor(.white)
+                                        .padding(16)
+                                        .frame(maxWidth: .infinity)
+                                        .background(pin.color)
+                                        .cornerRadius(6)
                                 }
-                            }) {
-                                Text(pin.label)
-                                    .font(.system(size: 14, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .padding(16)
-                                    .frame(maxWidth: .infinity)
-                                    .background(pin.color)
-                                    .cornerRadius(6)
+                                .disabled(!connectionManager.isConnected || pin.label.contains("Power") || pin.label.contains("Ground"))
                             }
-                            .disabled(!connectionManager.isConnected || pin.label.contains("Power") || pin.label.contains("Ground"))
                         }
                     }
+                    .padding(.horizontal, 16.0)
+                    .frame(minHeight: 300)
                 }
-                .padding(.horizontal, 16.0)
-                .frame(minHeight: 300)
+                .buttonStyle(PlainButtonStyle())
+                .padding()
             }
-            .buttonStyle(PlainButtonStyle())
-            .padding()
         }
+        .navigationBarTitle("", displayMode: .inline)
         .sheet(isPresented: $showLogs) {
             LogsView(showLogs: $showLogs, logs: connectionManager.webSocketManager?.logs ?? [])
         }
