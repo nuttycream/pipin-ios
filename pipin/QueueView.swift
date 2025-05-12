@@ -12,13 +12,22 @@ struct QueueView: View {
     
     @State private var selectedAction = "Set Low"
     @State private var selectedPin = "0"
+    @State private var delayValue = "1000"
     
     @State private var queue: [(String, String)] = []
     @State private var loop = false
     
     @State private var statusMessage: String? = nil
     
-    let actions = ["Set Low", "Set High"]
+    let actions = [
+        "Set Low",
+        "Set High",
+        "Delay",
+        "Wait For High",
+        "Wait For Low",
+        "Set Pullup",
+        "Set Pulldown"
+    ]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -51,16 +60,25 @@ struct QueueView: View {
                     }
                     .frame(width: 120)
                     
-                    TextField("GPIO Pin", text: $selectedPin)
-                        .frame(width: 80)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    if selectedAction == "Delay" {
+                        TextField("Milliseconds", text: $delayValue)
+                            .frame(width: 80)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.numberPad)
+                    } else {
+                        TextField("GPIO Pin", text: $selectedPin)
+                            .frame(width: 80)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.numberPad)
+                    }
                     
                     Button(action: {
                         if connectionManager.isConnected {
-                            connectionManager.addAction(action: selectedAction, pin: selectedPin) { success in
+                            let value = selectedAction == "Delay" ? delayValue : selectedPin
+                            connectionManager.addAction(action: selectedAction, value: value) { success in
                                 DispatchQueue.main.async {
                                     if success {
-                                        queue.append((selectedAction, selectedPin))
+                                        queue.append((selectedAction, value))
                                         statusMessage = "Action added"
                                     } else {
                                         statusMessage = "Failed to add action"
@@ -87,7 +105,7 @@ struct QueueView: View {
                 
                 HStack(spacing: 20) {
                     Button(action: {
-                        connectionManager.startActions { success in
+                        connectionManager.startActions(loop: loop) { success in
                             DispatchQueue.main.async {
                                 statusMessage = success ? "Queue started" : "Failed to start queue"
                             }
@@ -120,7 +138,7 @@ struct QueueView: View {
                 }
             }
             
-            Text("Queued Actions")
+            Text("Actions")
                 .font(.headline)
                 .padding(.top)
             
@@ -129,10 +147,24 @@ struct QueueView: View {
                     ForEach(queue.indices, id: \.self) { index in
                         let item = queue[index]
                         HStack {
-                            Image(systemName: item.0 == "Set High" ? "arrow.up.circle" : "arrow.down.circle")
-                                .foregroundColor(item.0 == "Set High" ? .green : .red)
+                            if item.0 == "Set High" {
+                                Image(systemName: "arrow.up.circle")
+                                    .foregroundColor(.green)
+                            } else if item.0 == "Set Low" {
+                                Image(systemName: "arrow.down.circle")
+                                    .foregroundColor(.red)
+                            } else if item.0 == "Delay" {
+                                Image(systemName: "clock")
+                                    .foregroundColor(.blue)
+                            } else if item.0.contains("Wait") {
+                                Image(systemName: "hourglass")
+                                    .foregroundColor(.orange)
+                            } else if item.0.contains("Pull") {
+                                Image(systemName: "arrow.up.and.down")
+                                    .foregroundColor(.purple)
+                            }
                             
-                            Text("[\(index)] \(item.0) GPIO \(item.1)")
+                            Text("[\(index)] \(item.0) \(item.0 == "Delay" ? "\(item.1)ms" : "GPIO \(item.1)")")
                                 .font(.system(size: 14, design: .monospaced))
                             
                             Spacer()

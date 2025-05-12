@@ -175,7 +175,7 @@ class PipinManager : ObservableObject {
     // I do think its best
     // we can just fetch the actions from the server
 
-    func addAction(action: String, pin: String, completion: @escaping (Bool) -> Void) {
+    func addAction(action: String, value: String, completion: @escaping (Bool) -> Void) {
         guard let baseURL = baseURL else {
             completion(false)
             return
@@ -185,13 +185,33 @@ class PipinManager : ObservableObject {
         // https://stackoverflow.com/a/48727705
         let url = baseURL.appendingPathComponent("add-action")
         var request = URLRequest(url: url)
+        
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         
-        let actionType = action == "Set High" ? "set-high" : "set-low"
+        let actionType: String
+        switch action {
+        case "Set High":
+            actionType = "set-high"
+        case "Set Low":
+            actionType = "set-low"
+        case "Delay":
+            actionType = "delay"
+        case "Wait For High":
+            actionType = "wait-for-high"
+        case "Wait For Low":
+            actionType = "wait-for-low"
+        case "Set Pull-Up":
+            actionType = "set-pull-up"
+        case "Set Pull-Down":
+            actionType = "set-pull-down"
+        default: // fall back to low for now
+            actionType = "set-low"
+        }
         
-        let formData = "action_type=\(actionType)&value=\(Int(pin) ?? 0)"
+        let formData = "action_type=\(actionType)&value=\(Int(value) ?? 0)"
         request.httpBody = formData.data(using: .utf8)
+        
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -210,7 +230,7 @@ class PipinManager : ObservableObject {
         }.resume()
     }
     
-    func startActions(completion: @escaping (Bool) -> Void) {
+    func startActions(loop: Bool = false, completion: @escaping (Bool) -> Void) {
         guard let baseURL = baseURL else {
             completion(false)
             return
@@ -219,6 +239,11 @@ class PipinManager : ObservableObject {
         let url = baseURL.appendingPathComponent("start-actions")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        
+        // use the loop
+        let formData = "should_loop=\(loop ? "true" : "false")"
+        request.httpBody = formData.data(using: .utf8)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
