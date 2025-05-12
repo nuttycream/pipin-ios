@@ -10,24 +10,10 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var connectionManager: PipinManager
     
-    @State private var selectedAction = "Set Low"
-    @State private var selectedPin = "0"
-    @State private var queue: [(String, String)] = []
-    @State private var loop = false
-    
     @State private var showLogs = false
     @State private var showConnectionModal = false
     @State private var isLoading = false
     @State private var statusMessage: String? = nil
-    
-    @State private var ipAddress = ""
-    @State private var port = ""
-    
-    @State private var selectedActionIndex = 0
-    @State private var showDropdown = false
-    
-    
-    let actions = ["Set Low", "Set High"]
     
     var body: some View {
         ScrollView {
@@ -142,144 +128,94 @@ struct ContentView: View {
                     }
                 }
                 
-                //GPIO pins
-                Text("GPIO Pins")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                        ForEach(gpioPins, id: \.id) { pin in
-                            Button(action: {
-                                if connectionManager.isConnected {
-                                    // extracting pin from label
-                                    // need better way to do this imo
-                                    // ideally the id
-                                    if let pinNumber = Int(pin.label.components(separatedBy: " ").last ?? "") {
-                                        connectionManager.togglePin(pinNumber) { success in
-                                            if !success {
-                                                DispatchQueue.main.async {
-                                                    statusMessage = "Failed to toggle pin"
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    statusMessage = "Not connected to server"
-                                }
-                            }) {
-                                Text(pin.label)
-                                    .font(.system(size: 14, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .padding(16)
-                                    .frame(maxWidth: .infinity)
-                                    .background(pin.color)
-                                    .cornerRadius(6)
-                            }
-                            .disabled(!connectionManager.isConnected || pin.label.contains("Power") || pin.label.contains("Ground"))
+                HStack(spacing: 16) {
+                    // App Navigation Buttons
+                    NavigationLink(destination: QueueView()) {
+                        VStack {
+                            Image(systemName: "list.bullet.rectangle")
+                                .font(.system(size: 24))
+                            Text("Queue")
                         }
-                    }
-                }
-                .padding(.horizontal, 16.0)
-                .frame(minHeight: 300)
-                
-                // todo mvoe this to its own separate page view
-                Text("Queue")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                
-                HStack {
-                    Picker("Action", selection: $selectedAction) {
-                        Text("Set Low").tag("Set Low")
-                        Text("Set High").tag("Set High")
+                        .frame(width: 80, height: 80)
+                        .background(Color.purple.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
                     }
                     
-                    TextField("GPIO Pin", text: $selectedPin)
-                        .frame(width: 60)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    //.keyboardType(.numberPad)
+                    Button(action: {
+                        showLogs.toggle()
+                    }) {
+                        VStack {
+                            Image(systemName: "doc.text")
+                                .font(.system(size: 24))
+                            Text("Logs")
+                        }
+                        .frame(width: 80, height: 80)
+                        .background(Color.orange.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
                     
-                    Button("Add") {
-                        if connectionManager.isConnected {
-                            connectionManager.addAction(action: selectedAction, pin: selectedPin) { success in
-                                DispatchQueue.main.async {
-                                    if success {
-                                        queue.append((selectedAction, selectedPin))
-                                        statusMessage = "Action added"
-                                    } else {
-                                        statusMessage = "Failed to add action"
-                                    }
-                                }
-                            }
-                        } else {
-                            statusMessage = "Not connected to server"
+                    Button(action: {
+                        showConnectionModal = true
+                    }) {
+                        VStack {
+                            Image(systemName: connectionManager.isConnected ? "wifi" : "wifi.slash")
+                                .font(.system(size: 24))
+                            Text(connectionManager.isConnected ? "Disconnect" : "Connect")
                         }
-                    }
-                    .padding(8)
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(6)
-                    .disabled(!connectionManager.isConnected)
-                }
-                
-                Toggle("Loop", isOn: $loop)
-                    .disabled(!connectionManager.isConnected)
-                
-                HStack {
-                    Button("Start") {
-                        connectionManager.startActions { success in
-                            DispatchQueue.main.async {
-                                statusMessage = success ? "Queue started" : "Failed to start queue"
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(6)
-                    .disabled(!connectionManager.isConnected || queue.isEmpty)
-                    
-                    Button("Stop") {
-                        connectionManager.stopActions { success in
-                            DispatchQueue.main.async {
-                                statusMessage = success ? "Queue stopped" : "Failed to stop queue"
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(6)
-                    .disabled(!connectionManager.isConnected)
-                }
-                
-                ForEach(queue.indices, id: \.self) { index in
-                    let item = queue[index]
-                    HStack {
-                        Text("[Queue \(index)] \(item.0) GPIO \(item.1)")
-                            .font(.system(size: 14, design: .monospaced))
-                            .foregroundColor(.gray)
-                        
-                        Button("Delete") {
-                            connectionManager.deleteAction(at: index) { success in
-                                DispatchQueue.main.async {
-                                    if success {
-                                        queue.remove(at: index)
-                                        statusMessage = "Action deleted"
-                                    } else {
-                                        statusMessage = "Failed to delete action"
-                                    }
-                                }
-                            }
-                        }
-                        .foregroundColor(.red)
-                        .disabled(!connectionManager.isConnected)
+                        .frame(width: 80, height: 80)
+                        .background(connectionManager.isConnected ? Color.red.opacity(0.8) : Color.green.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
                     }
                 }
             }
-            .buttonStyle(PlainButtonStyle())
-            .padding()
+            .padding(.vertical)
+            
+            //GPIO pins
+            Text("GPIO Pins")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .center)
+            
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(gpioPins, id: \.id) { pin in
+                        Button(action: {
+                            if connectionManager.isConnected {
+                                // extracting pin from label
+                                // need better way to do this imo
+                                // ideally the id
+                                if let pinNumber = Int(pin.label.components(separatedBy: " ").last ?? "") {
+                                    connectionManager.togglePin(pinNumber) { success in
+                                        if !success {
+                                            DispatchQueue.main.async {
+                                                statusMessage = "Failed to toggle pin"
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                statusMessage = "Not connected to server"
+                            }
+                        }) {
+                            Text(pin.label)
+                                .font(.system(size: 14, design: .monospaced))
+                                .foregroundColor(.white)
+                                .padding(16)
+                                .frame(maxWidth: .infinity)
+                                .background(pin.color)
+                                .cornerRadius(6)
+                        }
+                        .disabled(!connectionManager.isConnected || pin.label.contains("Power") || pin.label.contains("Ground"))
+                    }
+                }
+            }
+            .padding(.horizontal, 16.0)
+            .frame(minHeight: 300)
         }
+        .buttonStyle(PlainButtonStyle())
+        .padding()
         .sheet(isPresented: $showLogs) {
             LogsView(showLogs: $showLogs, logs: connectionManager.webSocketManager?.logs ?? [])
         }
