@@ -60,8 +60,9 @@ struct ContentView: View {
                             }) {
                                 VStack {
                                     Image(systemName: "gearshape.fill")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 28))
                                     Text("Initialize")
+                                        .font(.system(size: 12))
                                 }
                                 .frame(width: 80, height: 80)
                                 .background(Color.green.opacity(0.8))
@@ -81,8 +82,9 @@ struct ContentView: View {
                             }) {
                                 VStack {
                                     Image(systemName: "arrow.counterclockwise")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 28))
                                     Text("Reset")
+                                        .font(.system(size: 12))
                                 }
                                 .frame(width: 80, height: 80)
                                 .background(Color.blue.opacity(0.8))
@@ -102,8 +104,9 @@ struct ContentView: View {
                             }) {
                                 VStack {
                                     Image(systemName: "xmark.circle")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 28))
                                     Text("Terminate")
+                                        .font(.system(size: 12))
                                 }
                                 .frame(width: 80, height: 80)
                                 .background(Color.red.opacity(0.8))
@@ -118,8 +121,9 @@ struct ContentView: View {
                             NavigationLink(destination: QueueView()) {
                                 VStack {
                                     Image(systemName: "list.bullet.rectangle")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 28))
                                     Text("Queue")
+                                        .font(.system(size: 12))
                                 }
                                 .frame(width: 80, height: 80)
                                 .background(Color.purple.opacity(0.8))
@@ -132,8 +136,9 @@ struct ContentView: View {
                             }) {
                                 VStack {
                                     Image(systemName: "doc.text")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 28))
                                     Text("Logs")
+                                        .font(.system(size: 12))
                                 }
                                 .frame(width: 80, height: 80)
                                 .background(Color.orange.opacity(0.8))
@@ -146,8 +151,9 @@ struct ContentView: View {
                             }) {
                                 VStack {
                                     Image(systemName: connectionManager.isConnected ? "wifi" : "wifi.slash")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 28))
                                     Text(connectionManager.isConnected ? "Disconnect" : "Connect")
+                                        .font(.system(size: 12))
                                 }
                                 .frame(width: 80, height: 80)
                                 .background(connectionManager.isConnected ? Color.red.opacity(0.8) : Color.green.opacity(0.8))
