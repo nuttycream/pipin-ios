@@ -22,16 +22,6 @@ struct ContentView: View {
                     HStack {
                         Text("pipin")
                             .font(.system(size: 32, weight: .bold, design: .monospaced))
-                        
-                        if connectionManager.isConnected {
-                            Text("CONNECTED")
-                                .foregroundColor(.green)
-                                .font(.caption)
-                        } else {
-                            Text("DISCONNECTED")
-                                .foregroundColor(.red)
-                                .font(.caption)
-                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     
