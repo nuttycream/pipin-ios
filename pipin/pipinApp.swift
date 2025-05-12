@@ -56,7 +56,7 @@ class PipinManager : ObservableObject {
     @Published var isConnected: Bool = false
     @Published var lastError: String? = nil
     
-    private var webSocketManager: WebSocketManager? = nil
+    public var webSocketManager: WebSocketManager? = nil
     
     var baseURL: URL? {
         guard !ipAddress.isEmpty, !port.isEmpty else { return nil }
@@ -69,15 +69,63 @@ class PipinManager : ObservableObject {
     }
     
     func connect() {
-        guard let _ = baseURL else {
+        guard let baseURL = baseURL else {
             lastError = "invalid ip address or port"
             return
         }
+        
+        // since this is unused im gonna use
+        // this to test connection
+        let url = baseURL.appendingPathComponent("get-pins")
+        
+        // attempt status
+        DispatchQueue.main.async {
+            self.lastError = "connecting..."
+        }
+        
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("conn error: \(error)")
+                    self.lastError = "failed to connect: \(error.localizedDescription)"
+                    self.isConnected = false
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    self.lastError = "invalid server response"
+                    self.isConnected = false
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    self.isConnected = true
+                    self.lastError = nil
+                    self.connectWebSocket()
+                } else {
+                    self.lastError = "returned status: \(httpResponse.statusCode)"
+                    self.isConnected = false
+                }
+            }
+        }.resume()
     }
     
     func connectWebSocket() {
-        guard let wsURL = wsURL else { return }
+        guard let wsURL = wsURL else {
+            print("Invalid WebSocket URL")
+            return
+        }
+        
+        print("connecting to ws at \(wsURL)")
         webSocketManager = WebSocketManager(url: wsURL)
+        webSocketManager?.onConnectionFailed = { [weak self] error in
+            DispatchQueue.main.async {
+                self?.lastError = "ws connection failed: \(error)"
+            }
+        }
+        
         webSocketManager?.connect()
     }
     
@@ -276,6 +324,7 @@ class WebSocketManager: ObservableObject {
     @Published var isConnected: Bool = false
     @Published var logs: [String] = []
     
+    var onConnectionFailed: ((String) -> Void)?
     private var webSocketTask: URLSessionWebSocketTask?
     private let url: URL
     
@@ -284,10 +333,36 @@ class WebSocketManager: ObservableObject {
     }
     
     func connect() {
+        print("connecting to ws: \(url)")
+        
         webSocketTask = URLSession.shared.webSocketTask(with: url)
+        
         webSocketTask?.resume()
-        isConnected = true
+        
+        // hard limiut 2 second
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.pingWebSocket()
+        }
+        
         receiveMessage()
+    }
+    
+    // util func to send out a ping to test
+    // conn
+    private func pingWebSocket() {
+        webSocketTask?.sendPing { [weak self] error in
+            if let error = error {
+                print("ping failed: \(error)")
+                DispatchQueue.main.async {
+                    self?.isConnected = false
+                    self?.onConnectionFailed?("ping failed: \(error.localizedDescription)")
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self?.isConnected = true
+                }
+            }
+        }
     }
     
     func disconnect() {
