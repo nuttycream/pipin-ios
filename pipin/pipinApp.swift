@@ -181,18 +181,17 @@ class PipinManager : ObservableObject {
             return
         }
         
+        // the web server expects it in a specific format
+        // https://stackoverflow.com/a/48727705
         let url = baseURL.appendingPathComponent("add-action")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         
-        let actionType = action == "Set High" ? "high" : "low"
-        let body: [String: Any] = [
-            "type": actionType,
-            "pin": Int(pin) ?? 0
-        ]
+        let actionType = action == "Set High" ? "set-high" : "set-low"
         
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        let formData = "action_type=\(actionType)&value=\(Int(pin) ?? 0)"
+        request.httpBody = formData.data(using: .utf8)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -293,6 +292,8 @@ class PipinManager : ObservableObject {
         }.resume()
     }
     
+    // utility func for basic endpoints
+    // where i dont really care for the response
     private func performRequest(_ endpoint: String, completion: @escaping (Bool) -> Void) {
         guard let baseURL = baseURL else {
             completion(false)
