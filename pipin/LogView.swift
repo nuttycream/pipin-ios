@@ -9,7 +9,8 @@ import SwiftUI
 
 struct LogsView: View {
     @Binding var showLogs: Bool
-
+    var logs: [String]
+    
     var body: some View {
         VStack {
             HStack {
@@ -28,22 +29,26 @@ struct LogsView: View {
                 Spacer() // balances the layout
             }
             .background(Color.gray.opacity(0.3))
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("[Log] GPIO 23 failed: Not Initialized")
-                    Text("[Log] GPIO 2 set to HIGH")
-                    Text("[Log] Queue started")
-                    Text("[Log] Queue stopped")
-
-                    // More log entries here...
+            
+            if logs.isEmpty {
+                VStack {
+                    Spacer()
+                    Text("No logs available")
+                        .foregroundColor(.gray)
+                    Spacer()
                 }
-                .padding()
-                .foregroundColor(.white)
-                .font(.system(size: 14, design: .monospaced))
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(logs, id: \.self) { log in
+                            Text(log)
+                                .foregroundColor(.white)
+                                .font(.system(size: 14, design: .monospaced))
+                        }
+                    }
+                    .padding()
+                }
             }
-
-            Spacer()
         }
         .background(Color.black.edgesIgnoringSafeArea(.all))
     }
