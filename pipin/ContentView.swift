@@ -16,39 +16,85 @@ struct ContentView: View {
     @State private var loop = false
     
     @State private var showLogs = false
+    @State private var showConnectionModal = false
+    @State private var isLoading = false
+    @State private var statusMessage: String? = nil
+    
+    @State private var ipAddress = ""
+    @State private var port = ""
     
     @State private var selectedActionIndex = 0
     @State private var showDropdown = false
     
-    @State private var showConnectionModal = true
-    @State private var ipAddress = ""
-    @State private var port = ""
     
     let actions = ["Set Low", "Set High"]
     
     var body: some View {
-        
         ScrollView {
-            VStack(alignment: .center, spacing: 20.0){
+            VStack(alignment: .center, spacing: 20.0) {
+                HStack {
+                    Text("pipin")
+                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                    
+                    if connectionManager.isConnected {
+                        Text("CONNECTED")
+                            .foregroundColor(.green)
+                            .font(.caption)
+                    } else {
+                        Text("DISCONNECTED")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
                 
-                Text("pipin")
-                    .font(.system(size: 32, weight: .bold, design: .monospaced))
-                //.foregroundColor(.black)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                // temp
+                // send this to LogView
+                if let message = statusMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .padding()
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                statusMessage = nil
+                            }
+                        }
+                }
                 
-                //row setup, resest, Terminate button
+                if let message = connectionManager.lastError {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding()
+                }
+                
                 HStack {
                     Button(action: {
+                        isLoading = true
+                        connectionManager.setupGpio { success in
+                            DispatchQueue.main.async {
+                                isLoading = false
+                                statusMessage = success ? "Setup successful" : "Setup failed"
+                            }
+                        }
                     }) {
                         Text("Setup")
                             .foregroundColor(.black)
                             .padding()
                             .background(Color.green)
                             .cornerRadius(8)
-                        
                     }
+                    .disabled(isLoading || !connectionManager.isConnected)
                     
                     Button(action: {
+                        isLoading = true
+                        connectionManager.resetGpio { success in
+                            DispatchQueue.main.async {
+                                isLoading = false
+                                statusMessage = success ? "Reset successful" : "Reset failed"
+                            }
+                        }
                     }) {
                         Text("Reset")
                             .foregroundColor(.black)
@@ -56,8 +102,16 @@ struct ContentView: View {
                             .background(Color.green)
                             .cornerRadius(8)
                     }
+                    .disabled(isLoading || !connectionManager.isConnected)
                     
                     Button(action: {
+                        isLoading = true
+                        connectionManager.terminateGpio { success in
+                            DispatchQueue.main.async {
+                                isLoading = false
+                                statusMessage = success ? "Terminate successful" : "Terminate failed"
+                            }
+                        }
                     }) {
                         Text("Terminate")
                             .foregroundColor(.black)
@@ -65,7 +119,7 @@ struct ContentView: View {
                             .background(Color.green)
                             .cornerRadius(8)
                     }
-                    
+                    .disabled(isLoading || !connectionManager.isConnected)
                     
                     Button(action: {
                         showLogs.toggle()
@@ -76,11 +130,6 @@ struct ContentView: View {
                             .background(Color.blue)
                             .cornerRadius(8)
                     }
-                    .sheet(isPresented: $showLogs) {
-                        LogsView(showLogs: $showLogs)
-                        //.presentationDetents([.fraction(0.75)]) // Appears from the bottom
-                        //.background(Color.black.opacity(0.8))
-                    }
                     
                     Button(action: {
                         showConnectionModal = true
@@ -88,27 +137,36 @@ struct ContentView: View {
                         Text("Connect")
                             .foregroundColor(.white)
                             .padding()
-                            .background(Color.purple)
+                            .background(connectionManager.isConnected ? Color.red : Color.purple)
                             .cornerRadius(8)
-                    }
-                    .sheet(isPresented: $showConnectionModal) {
-                        ConnectionView(isPresented: $showConnectionModal, ipAddress: $ipAddress, port: $port)
                     }
                 }
                 
                 //GPIO pins
                 Text("GPIO Pins")
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
-                //.foregroundColor(.black)
                     .frame(maxWidth: .infinity, alignment: .center)
                 
-                ScrollView{
-                    //grid of GPIO pins
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8)  {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(gpioPins, id: \.id) { pin in
                             Button(action: {
-                                // TODO: Request to IP to toggle GPIO
-                                print("Tapped \(pin.label)")
+                                if connectionManager.isConnected {
+                                    // extracting pin from label
+                                    // need better way to do this imo
+                                    // ideally the id
+                                    if let pinNumber = Int(pin.label.components(separatedBy: " ").last ?? "") {
+                                        connectionManager.togglePin(pinNumber) { success in
+                                            if !success {
+                                                DispatchQueue.main.async {
+                                                    statusMessage = "Failed to toggle pin"
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    statusMessage = "Not connected to server"
+                                }
                             }) {
                                 Text(pin.label)
                                     .font(.system(size: 14, design: .monospaced))
@@ -118,21 +176,19 @@ struct ContentView: View {
                                     .background(pin.color)
                                     .cornerRadius(6)
                             }
+                            .disabled(!connectionManager.isConnected || pin.label.contains("Power") || pin.label.contains("Ground"))
                         }
                     }
                 }
                 .padding(.horizontal, 16.0)
-                .frame(minHeight:300)
+                .frame(minHeight: 300)
                 
-                
-                //Queue
+                // todo mvoe this to its own separate page view
                 Text("Queue")
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
-                //.foregroundColor(.black)
                     .frame(maxWidth: .infinity, alignment: .center)
                 
                 HStack {
-                    
                     Picker("Action", selection: $selectedAction) {
                         Text("Set Low").tag("Set Low")
                         Text("Set High").tag("Set High")
@@ -141,97 +197,168 @@ struct ContentView: View {
                     TextField("GPIO Pin", text: $selectedPin)
                         .frame(width: 60)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                    //.keyboardType(.numberPad)
                     
                     Button("Add") {
-                        let selectedAction = actions[selectedActionIndex]
-                        queue.append((selectedAction, selectedPin))
+                        if connectionManager.isConnected {
+                            connectionManager.addAction(action: selectedAction, pin: selectedPin) { success in
+                                DispatchQueue.main.async {
+                                    if success {
+                                        queue.append((selectedAction, selectedPin))
+                                        statusMessage = "Action added"
+                                    } else {
+                                        statusMessage = "Failed to add action"
+                                    }
+                                }
+                            }
+                        } else {
+                            statusMessage = "Not connected to server"
+                        }
                     }
                     .padding(8)
                     .background(Color.green)
                     .foregroundColor(.white)
                     .cornerRadius(6)
+                    .disabled(!connectionManager.isConnected)
                 }
                 
                 Toggle("Loop", isOn: $loop)
-                    .foregroundColor(.white)
+                    .disabled(!connectionManager.isConnected)
                 
-                Button("Stop") {
-                    // TODO: Stop logic
+                HStack {
+                    Button("Start") {
+                        connectionManager.startActions { success in
+                            DispatchQueue.main.async {
+                                statusMessage = success ? "Queue started" : "Failed to start queue"
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+                    .disabled(!connectionManager.isConnected || queue.isEmpty)
+                    
+                    Button("Stop") {
+                        connectionManager.stopActions { success in
+                            DispatchQueue.main.async {
+                                statusMessage = success ? "Queue stopped" : "Failed to stop queue"
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+                    .disabled(!connectionManager.isConnected)
                 }
-                .padding()
-                .background(Color.red)
-                .foregroundColor(.white)
-                .cornerRadius(6)
                 
                 ForEach(queue.indices, id: \.self) { index in
                     let item = queue[index]
-                    HStack{
+                    HStack {
                         Text("[Queue \(index)] \(item.0) GPIO \(item.1)")
                             .font(.system(size: 14, design: .monospaced))
                             .foregroundColor(.gray)
                         
                         Button("Delete") {
-                            //add pop here later
+                            connectionManager.deleteAction(at: index) { success in
+                                DispatchQueue.main.async {
+                                    if success {
+                                        queue.remove(at: index)
+                                        statusMessage = "Action deleted"
+                                    } else {
+                                        statusMessage = "Failed to delete action"
+                                    }
+                                }
+                            }
                         }
+                        .foregroundColor(.red)
+                        .disabled(!connectionManager.isConnected)
                     }
                 }
-            }.buttonStyle(PlainButtonStyle())
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding()
+        }
+        .sheet(isPresented: $showLogs) {
+            LogsView(showLogs: $showLogs, logs: connectionManager.webSocketManager?.logs ?? [])
+        }
+        .sheet(isPresented: $showConnectionModal) {
+            ConnectionView(
+                isPresented: $showConnectionModal,
+                ipAddress: $connectionManager.ipAddress,
+                port: $connectionManager.port,
+                onConnect: {
+                    connectionManager.connect()
+                },
+                onDisconnect: {
+                    connectionManager.disconnect()
+                },
+                isConnected: connectionManager.isConnected
+            )
+        }
+        .onAppear {
+            // shows connection view on open
+            if !connectionManager.isConnected && connectionManager.ipAddress.isEmpty {
+                showConnectionModal = true
+            }
         }
     }
-    
-    struct GPIOPin: Hashable {
-        let id = UUID()
-        let label: String
-        let color: Color
-    }
-    
-    let gpioPins: [GPIOPin] = [
-        .init(label: "3v3 Power", color: .red),
-        .init(label: "5v Power", color: .red),
-        .init(label: "GPIO 2", color: .green),
-        .init(label: "5v Power", color: .red),
-        .init(label: "GPIO 3", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 4", color: .green),
-        .init(label: "GPIO 14", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 15", color: .green),
-        .init(label: "GPIO 17", color: .green),
-        .init(label: "GPIO 18", color: .green),
-        .init(label: "GPIO 27", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 22", color: .green),
-        .init(label: "GPIO 23", color: .green),
-        .init(label: "3v3 Power", color: .red),
-        .init(label: "GPIO 24", color: .green),
-        .init(label: "GPIO 10", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 9", color: .green),
-        .init(label: "GPIO 25", color: .green),
-        .init(label: "GPIO 11", color: .green),
-        .init(label: "GPIO 8", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 7", color: .green),
-        .init(label: "GPIO 0", color: .green),
-        .init(label: "GPIO 1", color: .green),
-        .init(label: "GPIO 5", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 6", color: .green),
-        .init(label: "GPIO 12", color: .green),
-        .init(label: "GPIO 13", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 19", color: .green),
-        .init(label: "GPIO 16", color: .green),
-        .init(label: "GPIO 26", color: .green),
-        .init(label: "GPIO 20", color: .green),
-        .init(label: "Ground", color: .black),
-        .init(label: "GPIO 21", color: .green)
-    ]
 }
+
+struct GPIOPin: Hashable {
+    let id = UUID()
+    let label: String
+    let color: Color
+}
+
+let gpioPins: [GPIOPin] = [
+    .init(label: "3v3 Power", color: .red),
+    .init(label: "5v Power", color: .red),
+    .init(label: "GPIO 2", color: .green),
+    .init(label: "5v Power", color: .red),
+    .init(label: "GPIO 3", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 4", color: .green),
+    .init(label: "GPIO 14", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 15", color: .green),
+    .init(label: "GPIO 17", color: .green),
+    .init(label: "GPIO 18", color: .green),
+    .init(label: "GPIO 27", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 22", color: .green),
+    .init(label: "GPIO 23", color: .green),
+    .init(label: "3v3 Power", color: .red),
+    .init(label: "GPIO 24", color: .green),
+    .init(label: "GPIO 10", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 9", color: .green),
+    .init(label: "GPIO 25", color: .green),
+    .init(label: "GPIO 11", color: .green),
+    .init(label: "GPIO 8", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 7", color: .green),
+    .init(label: "GPIO 0", color: .green),
+    .init(label: "GPIO 1", color: .green),
+    .init(label: "GPIO 5", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 6", color: .green),
+    .init(label: "GPIO 12", color: .green),
+    .init(label: "GPIO 13", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 19", color: .green),
+    .init(label: "GPIO 16", color: .green),
+    .init(label: "GPIO 26", color: .green),
+    .init(label: "GPIO 20", color: .green),
+    .init(label: "Ground", color: .black),
+    .init(label: "GPIO 21", color: .green)
+]
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(PipinManager())
     }
 }
 
