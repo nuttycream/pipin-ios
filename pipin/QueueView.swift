@@ -30,7 +30,7 @@ struct QueueView: View {
     ]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .center, spacing: 20) {
             HStack {
                 Image(systemName: "list.bullet.rectangle")
                     .font(.title)
