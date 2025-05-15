@@ -7,7 +7,7 @@ A simple iOS application to communicate with a [pipin web server](https://github
 </p>
 
 > [!IMPORTANT]
-> pipin-ios requires pipin 0.2 (unreleased as of 5/10/2025)
+> pipin-ios requires at least pipin 0.2
 
 ## Features
 - Toggle individual pins (0-27)
